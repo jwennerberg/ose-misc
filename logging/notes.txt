@@ -1,0 +1,19 @@
+oadm new-project logging
+oc secrets new logging-deployer test=/dev/null
+
+
+oc create -f - <<API
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: logging-deployer
+secrets:
+- name: logging-deployer
+API
+
+oc policy add-role-to-user edit system:serviceaccount:logging:logging-deployer
+oadm policy add-cluster-role-to-user cluster-reader system:serviceaccount:logging:aggregated-logging-fluentd
+oadm policy add-scc-to-user privileged system:serviceaccount:logging:aggregated-logging-fluentd
+
+oc process logging-deployer-template -n openshift -v KIBANA_HOSTNAME=kibana.PublicIP.xip.io,ES_CLUSTER_SIZE=1,ES_INSTANCE_RAM=2GB,PUBLIC_MASTER_URL=https://xx.cloudapp.azure.com:8443 | oc create -f -
+
